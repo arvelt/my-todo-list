@@ -11,10 +11,12 @@ from google.appengine.ext import db
 from google.appengine.api import users
 
 class Task(db.Model):
-#    user = db.ReferenceProperty(users)
+    STATUS_NO_FINISH = 1
+    STATUS_FINISH = 2
+    
     user_id = db.StringProperty()
     content = db.StringProperty()
-    status = db.StringProperty()
+    status = db.IntegerProperty(default=STATUS_NO_FINISH)
     create_time = db.DateTimeProperty(auto_now_add=True)
     due_datetime = db.DateTimeProperty()
 
@@ -64,6 +66,37 @@ class MainPage(webapp2.RequestHandler):
                 form.action = '/delete';
                 form.submit();
             }
+            function doUpdateTask(key){
+                var form = document.getElementById('form');
+                var hide = document.createElement('input'); 
+                hide.type = 'hidden'; 
+                hide.name = 'key'; 
+                hide.id = 'key'; 
+                hide.value = key; 
+                
+                var sendstatus = document.getElementById('status_'+key); 
+                
+                var sta = document.createElement('input'); 
+                sta.type = 'hidden'; 
+                sta.name = 'status'; 
+                sta.value = sendstatus.value; 
+
+                form.appendChild(hide); 
+                form.appendChild(sta); 
+                form.action = '/update';
+                form.submit();
+            }
+            window.onload=function(){
+                var statuses = document.getElementsByName("status");
+                var inits = document.getElementsByName("initstatus");
+                for( var i = 0 ; i < statuses.length ; i++ ){
+                    var status = statuses[i];
+                    var init = inits[i];
+                    var status = statuses[i];
+                    var initSelected = init.value;
+                    status.options[initSelected-1].selected = true;
+                }
+            }
             </script>
             </head>
             <body>
@@ -71,7 +104,7 @@ class MainPage(webapp2.RequestHandler):
         """)
 
         self.response.out.write("""
-                    <table>
+                    <table name="input_task">
                         <tr>
                         <td><input type="text" name="send_content"></td>
                         <td><input type="date" name="send_duedate"></td>
@@ -83,8 +116,8 @@ class MainPage(webapp2.RequestHandler):
 
 
         self.response.out.write("""
-                    <table>
-                    <tr><td>タイトル</td><td>期限</td></tr>
+                    <table name="tasks">
+                    <tr><td>タイトル</td><td>状況</td><td>期限</td></tr>
         """)
 
         #タスク一覧
@@ -92,10 +125,23 @@ class MainPage(webapp2.RequestHandler):
             self.response.out.write(u"""
             <tr>
                 <td>%s</td>
-                <td>%s %s</td>
+                <td>
+                    <select id="status_%s" name="status">
+                    <option value="1">未完了</option>
+                    <option value="2">完了</option>
+                    </select>
+                    <input type="hidden" name="initstatus" value="%s"/>
+                </td>
+                <td>%s</td>
+                <td><input type="submit" value="更新" onclick="doUpdateTask('%s')"></td>
                 <td><input type="submit" value="削除" onclick="doDeleteTask('%s')"></td>
             </tr>""" % (
-            task.content,task.status,task.due_datetime,str(task.key()))
+            task.content,
+            str(task.key()),
+            task.status,
+            task.due_datetime,
+            str(task.key()),
+            str(task.key()))
             )
                         
         self.response.out.write("""
@@ -140,10 +186,7 @@ class AddTask(webapp2.RequestHandler):
         logging.debug(task_time)
         logging.debug(duedate)
 
-
-
-        #ユーザーIDをキーにして、タスクモデルを追加
-
+        #タスクモデルを追加
         task = Task()
         
         if users.get_current_user():
@@ -178,16 +221,23 @@ class TaskList(webapp2.RequestHandler):
         """)
 
 
-class SetDoneTask(webapp2.RequestHandler):    
+class UpdateTask(webapp2.RequestHandler):    
     def post(self):
-        self.response.out.write("""
-        <html>
-        <title></title>
-        <body>
-        SetDoneTaskPage
-        </body>
-        </html>
-        """)
+
+        #パラメータを取得
+        status = self.request.get('status')
+        key = self.request.get('key')
+        
+        logging.debug("updatetask")
+        logging.debug("status:"+status)
+        logging.debug("key:"+key)
+
+        #タスクモデルを取得して更新
+        task = Task.get(db.Key(key))
+        task.status = int(status)
+        task.put()
+
+        self.redirect('/')
 
 
 class DeleteTask(webapp2.RequestHandler):    
@@ -212,7 +262,7 @@ app = webapp2.WSGIApplication([
                                ('/', MainPage),
                                ('/list', TaskList),
                                ('/add', AddTask),
-                               ('/done', SetDoneTask),
+                               ('/update', UpdateTask),
                                ('/delete', DeleteTask)
                                ],debug=True)
 
