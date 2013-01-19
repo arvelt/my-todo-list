@@ -1,4 +1,5 @@
-#coding: utf-8
+# -*- coding: utf-8 -*-
+
 import datetime
 import webapp2
 
@@ -38,8 +39,35 @@ class MainPage(webapp2.RequestHandler):
         self.response.headers["Content-Type"] = "text/html; charset=utf-8"
         self.response.out.write("""
         <html>
+            <head>
+            <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+            <script type="text/javascript">
+            function doAddTask(key){
+                var form = document.getElementById('form');
+                var hide = document.createElement('input'); 
+                hide.type = 'hidden'; 
+                hide.name = 'key'; 
+                hide.id = 'key'; 
+                hide.value = key; 
+                form.appendChild(hide); 
+                form.action = '/add';
+                form.submit();
+            }
+            function doDeleteTask(key){
+                var form = document.getElementById('form');
+                var hide = document.createElement('input'); 
+                hide.type = 'hidden'; 
+                hide.id = 'key'; 
+                hide.name = 'key'; 
+                hide.value = key; 
+                form.appendChild(hide); 
+                form.action = '/delete';
+                form.submit();
+            }
+            </script>
+            </head>
             <body>
-                <form action="/add" method="post">
+                <form id="form" action="" method="post">
         """)
 
         self.response.out.write("""
@@ -48,7 +76,7 @@ class MainPage(webapp2.RequestHandler):
                         <td><input type="text" name="send_content"></td>
                         <td><input type="date" name="send_duedate"></td>
                         <td><input type="time" name="send_duetime"></td>
-                        <td><input type="submit" value="追加"></td>
+                        <td><input type="submit" value="追加" onclick="doAddTask()"></td>
                         </tr>
                     </table>
         """)
@@ -61,8 +89,13 @@ class MainPage(webapp2.RequestHandler):
 
         #タスク一覧
         for task in tasks :
-            self.response.out.write('<tr><td>%s</td><td>%s %s</td></tr>' % (
-            task.content,task.status,task.due_datetime)
+            self.response.out.write(u"""
+            <tr>
+                <td>%s</td>
+                <td>%s %s</td>
+                <td><input type="submit" value="削除" onclick="doDeleteTask('%s')"></td>
+            </tr>""" % (
+            task.content,task.status,task.due_datetime,str(task.key()))
             )
                         
         self.response.out.write("""
@@ -159,16 +192,22 @@ class SetDoneTask(webapp2.RequestHandler):
 
 class DeleteTask(webapp2.RequestHandler):    
     def post(self):
-        self.response.out.write("""
-        <html>
-        <title></title>
-        <body>
-        DeleteTaskPage
-        </body>
-        </html>
-        """)
 
+        #keyを取得
+        key = self.request.get('key')
+        task = Task.get(db.Key(key))
 
+        logging.debug("task user_id:"+task.user_id)
+        logging.debug("current user:"+users.get_current_user().user_id())
+
+        #自分のタスクのみ消せる
+        if (task.user_id != users.get_current_user().user_id()):
+            self.redirect('/')
+
+        task.delete()
+
+        self.redirect('/')
+        
 app = webapp2.WSGIApplication([
                                ('/', MainPage),
                                ('/list', TaskList),
