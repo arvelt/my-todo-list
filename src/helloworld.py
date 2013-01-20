@@ -2,18 +2,23 @@
 
 import datetime
 import webapp2
-
+import jinja2
+import os
 import logging
-
-logging.getLogger().setLevel(logging.DEBUG)
 
 from google.appengine.ext import db
 from google.appengine.api import users
+
+jinja_environment = jinja2.Environment(
+    loader=jinja2.FileSystemLoader(os.path.dirname(__file__)))
+
+logging.getLogger().setLevel(logging.DEBUG)
 
 class Task(db.Model):
     STATUS_NO_FINISH = 1
     STATUS_FINISH = 2
     
+    str_key_id = db.StringProperty()
     user_id = db.StringProperty()
     content = db.StringProperty()
     status = db.IntegerProperty(default=STATUS_NO_FINISH)
@@ -35,121 +40,136 @@ class MainPage(webapp2.RequestHandler):
         else:
             self.redirect(users.create_login_url(self.request.uri))
 
-        tasks = Task.all().filter("user_id", id).order("-create_time")
+        #tasks = Task.all().filter("user_id", id).order("-create_time")
+        tasks_query = Task.all().filter("user_id", id).order("-create_time")
+        tasks = tasks_query.fetch(20)
+        
+        for task in tasks :
+            if task.str_key_id == None :
+                task.str_key_id = str(task.key())
+        
+        template_values = {
+            'tasks': tasks
+        }
+        
+        template = jinja_environment.get_template('index.html')
+        self.response.headers["Content-Type"] = "text/html; charset=utf-8"
+        self.response.out.write(template.render(template_values))
         
         #html生成
-        self.response.headers["Content-Type"] = "text/html; charset=utf-8"
-        self.response.out.write("""
-        <html>
-            <head>
-            <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
-            <script type="text/javascript">
-            function doAddTask(key){
-                var form = document.getElementById('form');
-                var hide = document.createElement('input'); 
-                hide.type = 'hidden'; 
-                hide.name = 'key'; 
-                hide.id = 'key'; 
-                hide.value = key; 
-                form.appendChild(hide); 
-                form.action = '/add';
-                form.submit();
-            }
-            function doDeleteTask(key){
-                var form = document.getElementById('form');
-                var hide = document.createElement('input'); 
-                hide.type = 'hidden'; 
-                hide.id = 'key'; 
-                hide.name = 'key'; 
-                hide.value = key; 
-                form.appendChild(hide); 
-                form.action = '/delete';
-                form.submit();
-            }
-            function doUpdateTask(key){
-                var form = document.getElementById('form');
-                var hide = document.createElement('input'); 
-                hide.type = 'hidden'; 
-                hide.name = 'key'; 
-                hide.id = 'key'; 
-                hide.value = key; 
-                
-                var sendstatus = document.getElementById('status_'+key); 
-                
-                var sta = document.createElement('input'); 
-                sta.type = 'hidden'; 
-                sta.name = 'status'; 
-                sta.value = sendstatus.value; 
-
-                form.appendChild(hide); 
-                form.appendChild(sta); 
-                form.action = '/update';
-                form.submit();
-            }
-            window.onload=function(){
-                var statuses = document.getElementsByName("status");
-                var inits = document.getElementsByName("initstatus");
-                for( var i = 0 ; i < statuses.length ; i++ ){
-                    var status = statuses[i];
-                    var init = inits[i];
-                    var status = statuses[i];
-                    var initSelected = init.value;
-                    status.options[initSelected-1].selected = true;
-                }
-            }
-            </script>
-            </head>
-            <body>
-                <form id="form" action="" method="post">
-        """)
-
-        self.response.out.write("""
-                    <table name="input_task">
-                        <tr>
-                        <td><input type="text" name="send_content"></td>
-                        <td><input type="date" name="send_duedate"></td>
-                        <td><input type="time" name="send_duetime"></td>
-                        <td><input type="submit" value="追加" onclick="doAddTask()"></td>
-                        </tr>
-                    </table>
-        """)
-
-
-        self.response.out.write("""
-                    <table name="tasks">
-                    <tr><td>タイトル</td><td>状況</td><td>期限</td></tr>
-        """)
-
-        #タスク一覧
-        for task in tasks :
-            self.response.out.write(u"""
-            <tr>
-                <td>%s</td>
-                <td>
-                    <select id="status_%s" name="status">
-                    <option value="1">未完了</option>
-                    <option value="2">完了</option>
-                    </select>
-                    <input type="hidden" name="initstatus" value="%s"/>
-                </td>
-                <td>%s</td>
-                <td><input type="submit" value="更新" onclick="doUpdateTask('%s')"></td>
-                <td><input type="submit" value="削除" onclick="doDeleteTask('%s')"></td>
-            </tr>""" % (
-            task.content,
-            str(task.key()),
-            task.status,
-            task.due_datetime,
-            str(task.key()),
-            str(task.key()))
-            )
-                        
-        self.response.out.write("""
-                    </table>
-                </form>
-            <body>
-        </html>
-        """)
+#===============================================================================
+#        self.response.out.write("""
+#        <html>
+#            <head>
+#            <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+#            <script type="text/javascript">
+#            function doAddTask(key){
+#                var form = document.getElementById('form');
+#                var hide = document.createElement('input'); 
+#                hide.type = 'hidden'; 
+#                hide.name = 'key'; 
+#                hide.id = 'key'; 
+#                hide.value = key; 
+#                form.appendChild(hide); 
+#                form.action = '/add';
+#                form.submit();
+#            }
+#            function doDeleteTask(key){
+#                var form = document.getElementById('form');
+#                var hide = document.createElement('input'); 
+#                hide.type = 'hidden'; 
+#                hide.id = 'key'; 
+#                hide.name = 'key'; 
+#                hide.value = key; 
+#                form.appendChild(hide); 
+#                form.action = '/delete';
+#                form.submit();
+#            }
+#            function doUpdateTask(key){
+#                var form = document.getElementById('form');
+#                var hide = document.createElement('input'); 
+#                hide.type = 'hidden'; 
+#                hide.name = 'key'; 
+#                hide.id = 'key'; 
+#                hide.value = key; 
+#                
+#                var sendstatus = document.getElementById('status_'+key); 
+#                
+#                var sta = document.createElement('input'); 
+#                sta.type = 'hidden'; 
+#                sta.name = 'status'; 
+#                sta.value = sendstatus.value; 
+# 
+#                form.appendChild(hide); 
+#                form.appendChild(sta); 
+#                form.action = '/update';
+#                form.submit();
+#            }
+#            window.onload=function(){
+#                var statuses = document.getElementsByName("status");
+#                var inits = document.getElementsByName("initstatus");
+#                for( var i = 0 ; i < statuses.length ; i++ ){
+#                    var status = statuses[i];
+#                    var init = inits[i];
+#                    var status = statuses[i];
+#                    var initSelected = init.value;
+#                    status.options[initSelected-1].selected = true;
+#                }
+#            }
+#            </script>
+#            </head>
+#            <body>
+#                <form id="form" action="" method="post">
+#        """)
+# 
+#        self.response.out.write("""
+#                    <table name="input_task">
+#                        <tr>
+#                        <td><input type="text" name="send_content"></td>
+#                        <td><input type="date" name="send_duedate"></td>
+#                        <td><input type="time" name="send_duetime"></td>
+#                        <td><input type="submit" value="追加" onclick="doAddTask()"></td>
+#                        </tr>
+#                    </table>
+#        """)
+# 
+# 
+#        self.response.out.write("""
+#                    <table name="tasks">
+#                    <tr><td>タイトル</td><td>状況</td><td>期限</td></tr>
+#        """)
+# 
+#        #タスク一覧
+#        for task in tasks :
+#            self.response.out.write(u"""
+#            <tr>
+#                <td>%s</td>
+#                <td>
+#                    <select id="status_%s" name="status">
+#                    <option value="1">未完了</option>
+#                    <option value="2">完了</option>
+#                    </select>
+#                    <input type="hidden" name="initstatus" value="%s"/>
+#                </td>
+#                <td>%s</td>
+#                <td><input type="submit" value="更新" onclick="doUpdateTask('%s')"></td>
+#                <td><input type="submit" value="削除" onclick="doDeleteTask('%s')"></td>
+#            </tr>""" % (
+#            task.content,
+#            str(task.key()),
+#            task.status,
+#            task.due_datetime,
+#            str(task.key()),
+#            str(task.key()))
+#            )
+#                        
+#        self.response.out.write("""
+#                    </table>
+#                </form>
+#            <body>
+#        </html>
+#        """)
+#===============================================================================
 
 class AddTask(webapp2.RequestHandler):
     

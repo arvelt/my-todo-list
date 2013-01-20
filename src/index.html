@@ -1,0 +1,91 @@
+<html>
+    <head>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+    <script type="text/javascript">
+    function doAddTask(key){
+        var form = document.getElementById('form');
+        var hide = document.createElement('input'); 
+        hide.type = 'hidden'; 
+        hide.name = 'key'; 
+        hide.id = 'key'; 
+        hide.value = key; 
+        form.appendChild(hide); 
+        form.action = '/add';
+        form.submit();
+    }
+    function doDeleteTask(key){
+        var form = document.getElementById('form');
+        var hide = document.createElement('input'); 
+        hide.type = 'hidden'; 
+        hide.id = 'key'; 
+        hide.name = 'key'; 
+        hide.value = key; 
+        form.appendChild(hide); 
+        form.action = '/delete';
+        form.submit();
+    }
+    function doUpdateTask(key){
+        var form = document.getElementById('form');
+        var hide = document.createElement('input'); 
+        hide.type = 'hidden'; 
+        hide.name = 'key'; 
+        hide.id = 'key'; 
+        hide.value = key; 
+        
+        var sendstatus = document.getElementById('status_'+key); 
+        
+        var sta = document.createElement('input'); 
+        sta.type = 'hidden'; 
+        sta.name = 'status'; 
+        sta.value = sendstatus.value; 
+
+        form.appendChild(hide); 
+        form.appendChild(sta); 
+        form.action = '/update';
+        form.submit();
+    }
+    window.onload=function(){
+        var statuses = document.getElementsByName("status");
+        var inits = document.getElementsByName("initstatus");
+        for( var i = 0 ; i < statuses.length ; i++ ){
+            var status = statuses[i];
+            var init = inits[i];
+            var status = statuses[i];
+            var initSelected = init.value;
+            status.options[initSelected-1].selected = true;
+        }
+    }
+    </script>
+    </head>
+    <body>
+        <form id="form" action="" method="post">
+            <table name="input_task">
+                <tr>
+                <td><input type="text" name="send_content"></td>
+                <td><input type="date" name="send_duedate"></td>
+                <td><input type="time" name="send_duetime"></td>
+                <td><input type="submit" value="追加" onclick="doAddTask()"></td>
+                </tr>
+            </table>
+
+            <table name="tasks">
+            <tr><td>タイトル</td><td>状況</td><td>期限</td></tr>
+			{% for task in tasks %}
+			    <tr>
+			        <td>{{task.content}}</td>
+			        <td>
+			            <select id="status_{{task.str_key_id}}" name="status">
+			            <option value="1">未完了</option>
+			            <option value="2">完了</option>
+			            </select>
+			            <input type="hidden" name="initstatus" value="{{task.status}}"/>
+			        </td>
+			        <td>{{task.due_datetime}}</td>
+			        <td><input type="submit" value="更新" onclick="doUpdateTask('{{task.str_key_id}}')"></td>
+			        <td><input type="submit" value="削除" onclick="doDeleteTask('{{task.str_key_id}}')"></td>
+			    </tr>
+			{% endfor %}
+            </table>
+        </form>
+    <body>
+</html>
