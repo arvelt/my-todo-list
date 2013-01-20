@@ -1,8 +1,10 @@
             <table id="tasks">
-            <thead>
-            <tr><th>タイトル</th><th>状況</th><th>期限</th></tr>
-			</thead>
 			{% for task in tasks %}
+				{% if task %}
+		            <thead>
+		            <tr><th>タイトル</th><th>状況</th><th>期限</th></tr>
+					</thead>				
+				{% endif %}
 			    <tr>
 			        <td>{{task.content}}</td>
 			        <td>

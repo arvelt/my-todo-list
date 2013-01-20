@@ -1,0 +1,81 @@
+<html>
+	<meta http-equiv="Content-Type" content="text/html; harset=utf-8">
+    <head>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+    <script type="text/javascript">
+    function doAddTask(){
+    	$.ajax({
+    	    url: '/add',
+    	    type: 'POST',
+    	    data: {
+       	        "send_content" : $('#send_content').val() ,
+       	        "send_duedate" : $('#send_duedate').val() ,
+       	        "send_duetime" : $('#send_duetime').val() 
+    	    },
+    	    dataType: 'html',
+    	    success: function( data ) {
+				$('#taskslist').html(data);
+    	    },
+    	    error: function( data ) {
+    	    },
+    	    complete: function( data ) {
+    	    }
+    	});
+    }
+    function doDeleteTask(key){
+    	$.ajax({
+    	    url: '/delete',
+    	    type: 'POST',
+    	    data: {
+       	        "key" : key 
+    	    },
+    	    dataType: 'html',
+    	    success: function( data ) {
+				$('#taskslist').html(data);
+    	    },
+    	    error: function( data ) {
+    	    },
+    	    complete: function( data ) {
+    	    }
+    	});
+    }
+    function doUpdateTask(key){
+        var id_status = "status_"+key;
+    	$.ajax({
+    	    url: '/update',
+    	    type: 'POST',
+    	    data: {
+       	        "key" : key ,
+       	        "status" : $('#'+id_status).val()
+    	    },
+    	    dataType: 'html',
+    	    success: function( data ) {
+				$('#taskslist').html(data);
+    	    },
+    	    error: function( data ) {
+    	    },
+    	    complete: function( data ) {
+    	    }
+    	});
+    }
+    </script>
+    </head>
+    <body>
+		{% include 'head.html' %}
+        <form id="form" action="" method="post">
+			<p>
+            <table name="input_task">
+                <td><input type="text" id="send_content"></td>
+                <td><input type="date" id="send_duedate"></td>
+                <td><input type="time" id="send_duetime"></td>
+                <td><input type="button" value="追加" onclick="doAddTask()"></td>
+                </tr>
+            </table>
+			</p>
+			<div id="taskslist" >
+				{% include 'list.html' %}
+			</div>
+
+        </form>
+    <body>
+</html>

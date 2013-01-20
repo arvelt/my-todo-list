@@ -25,44 +25,70 @@ class Task(db.Model):
     create_time = db.DateTimeProperty(auto_now_add=True)
     due_datetime = db.DateTimeProperty()
 
+class IndexPage(webapp2.RequestHandler):
+
+    def get(self):
+
+        #ログインしていなければログインリンク
+        #ログインしていればメインページへのリンク
+        user = users.get_current_user()
+        if user:
+            greeting = ("""<a href="/main">go now!</a> """)
+        else:
+            greeting = ("<a href=\"%s\">Sign in or register</a>." %
+                        users.create_login_url("/main"))
+            
+        template_values = {
+            'greeting' : greeting
+        }
+        
+        template = jinja_environment.get_template('index.html')
+        self.response.headers["Content-Type"] = "text/html; charset=utf-8"
+        self.response.out.write(template.render(template_values))            
+            
 class MainPage(webapp2.RequestHandler):
 
     #--------------------
-    #タスクモデル一覧の取得
-    #htmlの作成
+    #メインページの取得
+    #タスク一覧を表示
     #--------------------
     def get(self):
                 
-        #ログインしていなければログインページへ
-        id = ''
-        if users.get_current_user():
-            id = users.get_current_user().user_id()
-        else:
-            self.redirect(users.create_login_url(self.request.uri))
+        user_id = getUserIdOrGoLoginPage(self)
 
-        tasks_query = Task.all().filter("user_id", id).order("-create_time")
+        #ログインユーザーを取得
+        user = users.get_current_user()
+        greeting = ("Welcome to todolist! , %s! (<a href=\"%s\">sign out</a>)" %
+                    (user.nickname(), users.create_logout_url("/")))
+
+        tasks_query = Task.all().filter("user_id", user_id).order("-create_time")
         tasks = tasks_query.fetch(50)
  
         #テンプレート内でstrが使えないので、ここでストリング化したキーをモデルに入れておく       
         for task in tasks :
             if task.str_key_id == None :
                 task.str_key_id = str(task.key())
-        
+
+            
         template_values = {
-            'tasks': tasks
+            'tasks': tasks ,
+            'greeting' : greeting
         }
+                
         
-        template = jinja_environment.get_template('index.html')
+        template = jinja_environment.get_template('main.html')
         self.response.headers["Content-Type"] = "text/html; charset=utf-8"
         self.response.out.write(template.render(template_values))
 
 class AddTask(webapp2.RequestHandler):
     
     #--------------------
-    #タスクモデル一覧の取得
-    #htmlの作成
+    #タスクモデルを追加する
+    #取得しなおした一覧部分を返却
     #--------------------    
     def post(self):
+
+        user_id = getUserIdOrGoLoginPage(self)
 
         #リクエストパラメータを取得
         task_content = self.request.get('send_content')
@@ -93,11 +119,8 @@ class AddTask(webapp2.RequestHandler):
         logging.debug(duedate)
 
         #タスクモデルを追加
-        task = Task()
-        
-        if users.get_current_user():
-            task.user_id = users.get_current_user().user_id()
-
+        task = Task()        
+        task.user_id = user_id
         task.content = task_content
         task.due_datetime = duedate
         task.put()
@@ -106,7 +129,14 @@ class AddTask(webapp2.RequestHandler):
 
 
 class UpdateTask(webapp2.RequestHandler):
+
+    #--------------------
+    #タスクモデルを更新
+    #取得しなおした一覧部分を返却
+    #--------------------    
     def post(self):
+
+        user_id = getUserIdOrGoLoginPage(self)
 
         #パラメータを取得
         status = self.request.get('status')
@@ -119,13 +149,23 @@ class UpdateTask(webapp2.RequestHandler):
         #タスクモデルを取得して更新
         task = Task.get(db.Key(key))
         task.status = int(status)
-        task.put()
+
+        #自分のタスクなら更新
+        if (task.user_id == user_id):
+            task.put()
 
         renderTaskListHtml(self)
 
 
 class DeleteTask(webapp2.RequestHandler):    
+
+    #--------------------
+    #タスクモデルを削除
+    #取得しなおした一覧部分を返却
+    #--------------------        
     def post(self):
+
+        user_id = getUserIdOrGoLoginPage(self)
 
         #keyを取得
         key = self.request.get('key')
@@ -135,19 +175,22 @@ class DeleteTask(webapp2.RequestHandler):
         logging.debug("task user_id:"+task.user_id)
         logging.debug("current user:"+users.get_current_user().user_id())
 
-        #自分のタスクのみ消せる
-        if (task.user_id != users.get_current_user().user_id()):
-            self.redirect('/')
-
-        task.delete()
+        #自分のタスクなら削除
+        if (task.user_id == user_id):
+            task.delete()
 
         renderTaskListHtml(self)
 
 def renderTaskListHtml(self):
-    if users.get_current_user():
-        id = users.get_current_user().user_id()
+
+    #-------------------------
+    #タスクのリストを取得
+    #一覧部分のHtmlとして整形して返却
+    #-------------------------
     
-    tasks_query = Task.all().filter("user_id", id).order("-create_time")
+    user_id = users.get_current_user().user_id()
+    
+    tasks_query = Task.all().filter("user_id", user_id).order("-create_time")
     tasks = tasks_query.fetch(50)
 
     #テンプレート内でstrが使えないので、ここでストリング化したキーをモデルに入れておく       
@@ -163,9 +206,20 @@ def renderTaskListHtml(self):
     self.response.headers["Content-Type"] = "text/html; charset=utf-8"
     self.response.out.write(template.render(template_values))
 
+def getUserIdOrGoLoginPage(self):
+
+    #ログインしていればユーザーIDを返す
+    #ログインしていなければログインページへ
+
+    if users.get_current_user():
+        return users.get_current_user().user_id()
+    else:
+        self.redirect(users.create_login_url(self.request.uri))
+
 
 app = webapp2.WSGIApplication([
-                               ('/', MainPage),
+                               ('/', IndexPage),
+                               ('/main', MainPage),
                                ('/add', AddTask),
                                ('/update', UpdateTask),
                                ('/delete', DeleteTask)
