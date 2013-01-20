@@ -2,6 +2,10 @@
 	<meta http-equiv="Content-Type" content="text/html; harset=utf-8">
     <head>
     <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+	<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.9.2/jquery-ui.min.js"></script>
+	<script src="js/jquery-ui-timepicker-addon.js"></script>
+	<script src="js/jquery-ui-sliderAccess.js"></script>
+	<link rel="stylesheet" type="text/css" href="css/jquery-ui-1.10.0.custom.min.css">
     <script type="text/javascript">
     function doAddTask(){
     	$.ajax({
@@ -66,8 +70,8 @@
 			<p>
             <table name="input_task">
                 <td><input type="text" id="send_content"></td>
-                <td><input type="date" id="send_duedate"></td>
-                <td><input type="time" id="send_duetime"></td>
+                <td><input type="text" id="send_duedate"></td>
+                <td><input type="text" id="send_duetime"></td>
                 <td><input type="button" value="追加" onclick="doAddTask()"></td>
                 </tr>
             </table>
@@ -77,5 +81,15 @@
 			</div>
 
         </form>
+<script type="text/javascript">
+	$(function(){
+		$("#send_duedate").datepicker(
+			{dateFormat: 'yy-mm-dd'}
+		);
+	});
+	$(function(){
+		$("#send_duetime").timepicker();
+	});
+</script>
     <body>
 </html>
