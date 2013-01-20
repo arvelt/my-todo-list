@@ -1,4 +1,5 @@
 <html>
+	<meta http-equiv="Content-Type" content="text/html; harset=utf-8">
     <head>
     <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
     <script type="text/javascript">
@@ -44,17 +45,6 @@
         form.action = '/update';
         form.submit();
     }
-    window.onload=function(){
-        var statuses = document.getElementsByName("status");
-        var inits = document.getElementsByName("initstatus");
-        for( var i = 0 ; i < statuses.length ; i++ ){
-            var status = statuses[i];
-            var init = inits[i];
-            var status = statuses[i];
-            var initSelected = init.value;
-            status.options[initSelected-1].selected = true;
-        }
-    }
     </script>
     </head>
     <body>
@@ -75,8 +65,16 @@
 			        <td>{{task.content}}</td>
 			        <td>
 			            <select id="status_{{task.str_key_id}}" name="status">
+						{% if task.status == 1 %}
+			            <option value="1" selected>未完了</option>
+						{% else %}
 			            <option value="1">未完了</option>
+						{% endif %}
+						{% if task.status == 2 %}
+			            <option value="2" selected>完了</option>
+						{% else %}
 			            <option value="2">完了</option>
+						{% endif %}
 			            </select>
 			            <input type="hidden" name="initstatus" value="{{task.status}}"/>
 			        </td>
