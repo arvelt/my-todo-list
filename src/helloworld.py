@@ -5,12 +5,17 @@ import webapp2
 import jinja2
 import os
 import logging
+import jinja2_custom_filters
 
 from google.appengine.ext import db
 from google.appengine.api import users
 
 jinja_environment = jinja2.Environment(
     loader=jinja2.FileSystemLoader(os.path.dirname(__file__)))
+
+jinja_environment.filters.update({
+    "datetimeformat": jinja2_custom_filters.datetimeformat
+})
 
 logging.getLogger().setLevel(logging.DEBUG)
 
@@ -92,31 +97,15 @@ class AddTask(webapp2.RequestHandler):
 
         #リクエストパラメータを取得
         task_content = self.request.get('send_content')
-        req_duedate = self.request.get('send_duedate') #=>2013-01-19
-        req_time = self.request.get('send_duetime')    #=>03:00
+        req_duedate = self.request.get('send_duedatetime') #=>2013-01-19 3:00
 
         logging.debug("key:"+self.request.get('key'))
         logging.debug("content:"+task_content)
         logging.debug("dudate"+req_duedate)
-        logging.debug("duetime"+req_time)
 
-        #日付と時間をdatetime型に統一        
-        task_duedate = datetime.datetime.strptime(req_duedate, '%Y-%m-%d')
-        task_time = datetime.datetime.strptime(req_time, '%H:%M')
-
-        #１つのdatetimeとして生成
-        duedate = datetime.datetime(
-        task_duedate.year ,
-        task_duedate.month ,
-        task_duedate.day ,
-        task_time.hour ,
-        task_time.minute ,
-        0
-        )
- 
-        logging.debug(task_duedate)
-        logging.debug(task_time)
-        logging.debug(duedate)
+        #日付時刻チェック   
+        checkDateTime(self,req_duedate)
+        duedate = datetime.datetime.strptime(req_duedate, '%Y-%m-%d %H:%M')
 
         #タスクモデルを追加
         task = Task()        
@@ -139,16 +128,26 @@ class UpdateTask(webapp2.RequestHandler):
         user_id = getUserIdOrGoLoginPage(self)
 
         #パラメータを取得
+        content = self.request.get('content')
+        req_datetime = self.request.get('datetime')
         status = self.request.get('status')
         key = self.request.get('key')
-        
+
         logging.debug("updatetask")
-        logging.debug("status:"+status)
         logging.debug("key:"+key)
+        logging.debug("content:"+content)
+        logging.debug("status:"+status)
+        logging.debug("datetime:"+req_datetime)
+
+        #日付時刻チェック   
+        checkDateTime(self,req_datetime)
+        checked_date_time = datetime.datetime.strptime(req_datetime, '%Y-%m-%d %H:%M')
 
         #タスクモデルを取得して更新
         task = Task.get(db.Key(key))
         task.status = int(status)
+        task.content = content
+        task.due_datetime = checked_date_time
 
         #自分のタスクなら更新
         if (task.user_id == user_id):
@@ -199,7 +198,8 @@ def renderTaskListHtml(self):
             task.str_key_id = str(task.key())
     
     template_values = {
-        'tasks': tasks
+        'tasks': tasks ,
+        'datetime' : datetime.datetime
     }
     
     template = jinja_environment.get_template('list.html')
@@ -215,6 +215,13 @@ def getUserIdOrGoLoginPage(self):
         return users.get_current_user().user_id()
     else:
         self.redirect(users.create_login_url(self.request.uri))
+
+def checkDateTime(self,check_date_time):
+    try :
+        datetime.datetime.strptime(check_date_time, '%Y-%m-%d %H:%M')
+    except ValueError:
+        self.redirect("/")
+
 
 
 app = webapp2.WSGIApplication([
