@@ -1,0 +1,28 @@
+            <table id="tasks">
+            <thead>
+            <tr><th>タイトル</th><th>状況</th><th>期限</th></tr>
+			</thead>
+			{% for task in tasks %}
+			    <tr>
+			        <td>{{task.content}}</td>
+			        <td>
+			            <select id="status_{{task.str_key_id}}" name="status">
+						{% if task.status == 1 %}
+			            <option value="1" selected>未完了</option>
+						{% else %}
+			            <option value="1">未完了</option>
+						{% endif %}
+						{% if task.status == 2 %}
+			            <option value="2" selected>完了</option>
+						{% else %}
+			            <option value="2">完了</option>
+						{% endif %}
+			            </select>
+			            <input type="hidden" name="initstatus" value="{{task.status}}"/>
+			        </td>
+			        <td>{{task.due_datetime}}</td>
+			        <td><input type="button" value="更新" onclick="doUpdateTask('{{task.str_key_id}}')"></td>
+			        <td><input type="button" value="削除" onclick="doDeleteTask('{{task.str_key_id}}')"></td>
+			    </tr>
+			{% endfor %}
+            </table>

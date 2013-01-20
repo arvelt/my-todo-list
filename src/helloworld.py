@@ -61,23 +61,24 @@ class AddTask(webapp2.RequestHandler):
     #--------------------
     #タスクモデル一覧の取得
     #htmlの作成
-    #--------------------
+    #--------------------    
     def post(self):
 
         #リクエストパラメータを取得
-        
-        #内容を取得
         task_content = self.request.get('send_content')
-        
-        #日付を取得
         req_duedate = self.request.get('send_duedate') #=>2013-01-19
-        task_duedate = datetime.datetime.strptime(req_duedate, '%Y-%m-%d')
-
-        #時間を取得
         req_time = self.request.get('send_duetime')    #=>03:00
+
+        logging.debug("key:"+self.request.get('key'))
+        logging.debug("content:"+task_content)
+        logging.debug("dudate"+req_duedate)
+        logging.debug("duetime"+req_time)
+
+        #日付と時間をdatetime型に統一        
+        task_duedate = datetime.datetime.strptime(req_duedate, '%Y-%m-%d')
         task_time = datetime.datetime.strptime(req_time, '%H:%M')
 
-        #datetimeを生成
+        #１つのdatetimeとして生成
         duedate = datetime.datetime(
         task_duedate.year ,
         task_duedate.month ,
@@ -100,33 +101,11 @@ class AddTask(webapp2.RequestHandler):
         task.content = task_content
         task.due_datetime = duedate
         task.put()
-        
-        self.redirect('/')
 
-class TaskList(webapp2.RequestHandler):
-    def post(self):
-        
-        id = ""
-        if users.get_current_user():
-            id = users.get_current_user().user_id()
-        else:
-            self.redirect(users.create_login_url(self.request.uri))
-
-        tasks = Task.all().filter("user_id", id).order("-create_time")
-
-        tasks.to_json
-
-        self.response.out.write("""
-        <html>
-        <title></title>
-        <body>
-        AddtaskPage
-        </body>
-        </html>
-        """)
+        renderTaskListHtml(self)
 
 
-class UpdateTask(webapp2.RequestHandler):    
+class UpdateTask(webapp2.RequestHandler):
     def post(self):
 
         #パラメータを取得
@@ -142,7 +121,7 @@ class UpdateTask(webapp2.RequestHandler):
         task.status = int(status)
         task.put()
 
-        self.redirect('/')
+        renderTaskListHtml(self)
 
 
 class DeleteTask(webapp2.RequestHandler):    
@@ -150,6 +129,7 @@ class DeleteTask(webapp2.RequestHandler):
 
         #keyを取得
         key = self.request.get('key')
+        logging.debug("key:"+key)
         task = Task.get(db.Key(key))
 
         logging.debug("task user_id:"+task.user_id)
@@ -161,11 +141,31 @@ class DeleteTask(webapp2.RequestHandler):
 
         task.delete()
 
-        self.redirect('/')
-        
+        renderTaskListHtml(self)
+
+def renderTaskListHtml(self):
+    if users.get_current_user():
+        id = users.get_current_user().user_id()
+    
+    tasks_query = Task.all().filter("user_id", id).order("-create_time")
+    tasks = tasks_query.fetch(50)
+
+    #テンプレート内でstrが使えないので、ここでストリング化したキーをモデルに入れておく       
+    for task in tasks :
+        if task.str_key_id == None :
+            task.str_key_id = str(task.key())
+    
+    template_values = {
+        'tasks': tasks
+    }
+    
+    template = jinja_environment.get_template('list.html')
+    self.response.headers["Content-Type"] = "text/html; charset=utf-8"
+    self.response.out.write(template.render(template_values))
+
+
 app = webapp2.WSGIApplication([
                                ('/', MainPage),
-                               ('/list', TaskList),
                                ('/add', AddTask),
                                ('/update', UpdateTask),
                                ('/delete', DeleteTask)
