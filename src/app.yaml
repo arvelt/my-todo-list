@@ -15,7 +15,7 @@ handlers:
   static_dir: css/images
 
 - url: /.*
-  script: helloworld.app
+  script: main.app
   
 libraries:
 - name: jinja2

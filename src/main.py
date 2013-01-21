@@ -104,14 +104,19 @@ class AddTask(webapp2.RequestHandler):
         logging.debug("dudate"+req_duedate)
 
         #日付時刻チェック   
-        checkDateTime(self,req_duedate)
-        duedate = datetime.datetime.strptime(req_duedate, '%Y-%m-%d %H:%M')
+        duedate = None
+        if req_duedate :
+            checkDateTime(self,req_duedate)
+            duedate = datetime.datetime.strptime(req_duedate, '%Y-%m-%d %H:%M')
 
         #タスクモデルを追加
         task = Task()        
         task.user_id = user_id
         task.content = task_content
-        task.due_datetime = duedate
+        if duedate :
+            task.due_datetime = duedate
+        else :
+            task.due_datetime = None
         task.put()
 
         renderTaskListHtml(self)
@@ -140,14 +145,20 @@ class UpdateTask(webapp2.RequestHandler):
         logging.debug("datetime:"+req_datetime)
 
         #日付時刻チェック   
-        checkDateTime(self,req_datetime)
-        checked_date_time = datetime.datetime.strptime(req_datetime, '%Y-%m-%d %H:%M')
+        checked_date_time = None
+        if req_datetime :
+            checkDateTime(self,req_datetime)
+            checked_date_time = datetime.datetime.strptime(req_datetime, '%Y-%m-%d %H:%M')
 
         #タスクモデルを取得して更新
         task = Task.get(db.Key(key))
         task.status = int(status)
         task.content = content
-        task.due_datetime = checked_date_time
+
+        if checked_date_time :
+            task.due_datetime = checked_date_time
+        else :
+            task.due_datetime = None
 
         #自分のタスクなら更新
         if (task.user_id == user_id):

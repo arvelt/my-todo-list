@@ -21,7 +21,11 @@
 						{% endif %}
 			            </select>
 			        </td>
+				{% if task.due_datetime %}
 			        <td><input id="datetime_{{task.str_key_id}}" name="datetime" type="text" value="{{task.due_datetime|datetimeformat('%Y-%m-%d %H:%M')}}"/></td>
+				{% else %}
+			        <td><input id="datetime_{{task.str_key_id}}" name="datetime" type="text" value=""/></td>
+				{% endif %}
 			        <td><input type="button" value="更新" onclick="doUpdateTask('{{task.str_key_id}}')"></td>
 			        <td><input type="button" value="削除" onclick="doDeleteTask('{{task.str_key_id}}')"></td>
 			    </tr>
